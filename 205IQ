@@ -1,0 +1,89 @@
+#!/usr/bin/env python3
+
+import sys
+import math
+
+EXIT_SUCCESS = 0
+EXIT_FAILURE = 84
+
+def exit_with_usage(binary_name, exit_value=EXIT_SUCCESS):
+    usage = [
+        'USAGE',
+        '   {} u s [IQ1] [IQ2]'.format(binary_name),
+        '',
+        'DESCRIPTION',
+        '   u       mean',
+        '   s       standard deviation',
+        '   IQ1     minimum IQ',
+        '   IQ2     maximum IQ'
+    ]
+
+    print('\n'.join(usage), file=sys.stderr)
+    sys.exit(exit_value)
+
+def parse_argument(args):
+    if len(args) < 3 or len(args) > 5:
+        exit_with_usage(args[0], exit_value=EXIT_FAILURE)
+    try:
+        u = float(args[1])
+        s = float(args[2])
+        assert 0 <= u <= 200
+        assert 0 <= s <= 200
+    except:
+        exit_with_usage(args[0], exit_value=EXIT_FAILURE)
+    try:
+        min_IQ = float(args[3])
+        assert 0 <= min_IQ <= 200
+    except IndexError:
+        min_IQ = None
+    except (ValueError, AssertionError):
+        exit_with_usage(args[0], exit_value=EXIT_FAILURE)
+    try:
+        max_IQ = float(args[4])
+        assert min_IQ is not None
+        assert 0 <= max_IQ <= 200
+        assert min_IQ <= max_IQ
+    except IndexError:
+        max_IQ = None
+    except (ValueError, AssertionError):
+        exit_with_usage(args[0], exit_value=EXIT_FAILURE)
+    return u, s, min_IQ, max_IQ
+
+def normal_distribution(u, s, x):
+    """
+        u -- mean value
+        s -- standard deviation
+    """
+    return (1.0 / (s * math.sqrt(2.0 * math.pi))) * math.exp(-(math.pow(x - u, 2) / (2 * math.pow(s, 2))))
+
+def trapezoid_method(f, x, dx):
+    return (f(x) + f(x + dx)) / 2.0
+
+def compute_people_with_IQ_between(f, begin=0.0, end=200):
+    result = 0.0
+    dx = 0.001
+
+    while begin < end:
+        result += dx * trapezoid_method(f, begin, dx)
+        begin += dx
+    return result * 100.0
+
+def main(args):
+    if args[1:] == ['-h']:
+        exit_with_usage(args[0])
+    u, s, min_IQ, max_IQ = parse_argument(args)
+    f = lambda x: normal_distribution(u, s, x)
+
+    if min_IQ is None and max_IQ is None:
+        for x in range(0, 201):
+            print('{} {:.5f}'.format(x, f(x)))
+    elif max_IQ is None:
+        print('{:.1f}% of people have an IQ inferior to {:.0f}'.format(
+            compute_people_with_IQ_between(f, begin=0.0, end=min_IQ), min_IQ))
+    else:
+        print('{:.1f}% of people have an IQ between {:.0f} and {:.0f}'.format(
+            compute_people_with_IQ_between(f, begin=min_IQ, end=max_IQ), min_IQ, max_IQ))
+
+if __name__ == '__main__':
+    main(sys.argv)
+    sys.exit(EXIT_SUCCESS)
